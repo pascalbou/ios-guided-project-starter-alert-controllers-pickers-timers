@@ -86,6 +86,7 @@ class Countdown {
             if currentTime <= stopDate {
                 // Timer is active, keep counting down
                 delegate?.countdownDidUpdate(timeRemaining: timeRemaining)
+                print(timeRemaining)
             } else {
                 // Timer is finished, reset and stop counting down
                 state = .finished

@@ -17,6 +17,15 @@ class CountdownViewController: UIViewController {
     @IBOutlet weak var resetButton: UIButton!
     @IBOutlet weak var countdownPicker: UIPickerView!
     
+    var dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss:SS"
+        formatter.timeZone = TimeZone.init(secondsFromGMT: 0)
+        return formatter
+    }()
+    
+    let countdown = Countdown()
+    
     // MARK: - Properties
     
     lazy private var countdownPickerData: [[String]] = {
@@ -29,60 +38,108 @@ class CountdownViewController: UIViewController {
         return data
     }()
     
+    var duration: TimeInterval {
+        // convert the selected minutes and seconds from the picker view into a single amount of seconds that the countdown should run for.
+        
+        let minutes = countdownPicker.selectedRow(inComponent: 0)
+        let seconds = countdownPicker.selectedRow(inComponent: 2)
+        
+        let totalSeconds = TimeInterval(minutes * 60 + seconds)
+        
+        return totalSeconds
+    }
+    
     // MARK: - View Lifecycle
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        countdownPicker.delegate = self
+        countdownPicker.dataSource = self
+        countdown.delegate = self
+        
+        timeLabel.font = UIFont.monospacedDigitSystemFont(ofSize: 64, weight: .medium)
     }
     
     // MARK: - Actions
     
     @IBAction func startButtonTapped(_ sender: UIButton) {
-        
+        countdown.start()
     }
     
     @IBAction func resetButtonTapped(_ sender: UIButton) {
-        
+        countdown.reset()
+        updateViews()
     }
     
     // MARK: - Private
     
     private func showAlert() {
+        let alert = UIAlertController(title: "Timer Finished", message: "Your countdown is over", preferredStyle: .alert)
         
-    }
-    
-    private func updateViews() {
+        let okAction = UIAlertAction(title: "OK", style: .default, handler: nil)
         
+        alert.addAction(okAction)
+        
+        present(alert, animated: true, completion: nil)
     }
     
     private func string(from duration: TimeInterval) -> String {
-        #warning("return a string value derived from the time interval passed in")
-        return ""
+        let date = Date(timeIntervalSinceReferenceDate: duration)
+        return dateFormatter.string(from: date)
+    }
+    
+    private func updateViews() {
+        switch countdown.state {
+        case .started:
+            timeLabel.text = string(from: countdown.timeRemaining)
+            startButton.isEnabled = false
+        case .finished:
+            timeLabel.text = string(from: 0)
+            startButton.isEnabled = true
+        case .reset:
+            timeLabel.text = string(from: countdown.duration)
+            startButton.isEnabled = true
+        }
     }
 }
 
 extension CountdownViewController: CountdownDelegate {
     func countdownDidUpdate(timeRemaining: TimeInterval) {
-        
+        updateViews()
     }
     
     func countdownDidFinish() {
-        
+        showAlert()
+        updateViews()
     }
 }
 
 extension CountdownViewController: UIPickerViewDataSource {
+    
+    // how many arrays do we have?
     func numberOfComponents(in pickerView: UIPickerView) -> Int {
-        #warning("Change this to return the number of components for the picker view")
-        return 0
+        return countdownPickerData.count
     }
     
     func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
-        #warning("Change this to return the number of rows per component in the picker view")
-        return 0
+        return countdownPickerData[component].count
     }
 }
 
 extension CountdownViewController: UIPickerViewDelegate {
     
+    // which component is being set up?
+    func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
+        return countdownPickerData[component][row]
+    }
+    
+    // gets called when you select a row
+    func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
+        countdown.duration = duration
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, widthForComponent component: Int) -> CGFloat {
+        return 50
+    }
 }
